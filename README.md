@@ -2,12 +2,17 @@
 
 Aplicativo social de leitura, importação e autoria construído sobre o repositório existente com Next.js 14 App Router, React 18, TypeScript strict, Tailwind CSS, Supabase, Zustand, `react-pageflip` e `next-intl`.
 
-## Estado verificado em 30/07/2026
+## Estado verificado em 02/08/2026
 
 ### Testes aprovados nesta rodada
 
-- `npx tsc --noEmit`: aprovado.
+- `npx tsc --noEmit`: aprovado após a migração estrutural do leitor.
+- `npm run check:reader-translations`: 47 chaves do namespace `reader` validadas em PT/EN/ES.
 - `npm run build`: aprovado com Next.js 14.2.35; 18 páginas geradas e as três APIs de autenticação reconhecidas.
+- EPUB real ilustrado de domínio público, *The Tale of Peter Rabbit* (Project Gutenberg #14838): 2 capítulos, 96 parágrafos, 28 imagens internas, 3 headings, 2 divisores, 1 blockquote, 4 itens de lista, quebras manuais e capa de 169159 bytes preservados.
+- EPUB real *Alice's Adventures in Wonderland* (Project Gutenberg #11): 14 seções, 821 parágrafos, headings, divisores, blockquote, listas e quebras manuais preservados.
+- DOCX real gerado para aceite: headings, parágrafos, lista, quebra manual e imagem convertida para data URL aprovados.
+- PDF real gerado para aceite: metadados, duas páginas, dois headings, três parágrafos reconstruídos e placeholder de imagem incorporada aprovados.
 - PM2: processo `readr` online na porta 3000.
 - `GET /`: HTTP 200.
 - Console no dashboard e em `/settings`: nenhuma mensagem capturada.
@@ -44,19 +49,29 @@ A CLI/token da Vercel também não está configurada no sandbox. O build está p
 
 ### Leitor
 
-- Conteúdo contínuo repaginado conforme viewport, fonte, margens e espaçamento.
-- Posição persistida por `anchor_offset`, um offset global de palavras, além da página derivada.
-- `ResizeObserver` único, agrupado com `requestAnimationFrame`.
-- Páginas memoizadas e janela de oito páginas no `react-pageflip`.
-- Rolagem usa janela virtual de nove páginas com espaçadores, evitando montar o livro inteiro.
-- Capítulos, miniaturas textuais reais, busca destacada e marcadores listáveis/removíveis/navegáveis.
-- Marcadores também persistem âncora; mudanças de paginação recalculam o destino.
-- Brilho exposto somente em telas móveis.
-- Transições honestas: curva real (`react-pageflip`), slide e fade; opções OpenGL/decorativas foram removidas.
-- Preferências do leitor persistidas pelo middleware `persist` do Zustand.
-- Navegação determinística via parâmetro interno validado `from`.
+#### Decisões de conteúdo
 
-As colunas `reading_progress.anchor_offset` e `bookmarks.anchor_offset` estão no SQL local e precisam ser aplicadas remotamente antes de testar persistência real.
+- O formato intermediário usa `ReaderChapter` e blocos tipados: heading, paragraph, blockquote, list-item, divider e image.
+- EPUB percorre `container.xml`, OPF, manifest, spine e `nav.xhtml`/NCX; resolve paths relativos e incorpora imagens internas sem achatar a estrutura.
+- DOCX usa `mammoth.convertToHtml()` e converte imagens embutidas para data URLs.
+- PDF usa `hasEOL`, posição vertical, altura/tamanho de fonte e mediana inferior para reconstruir linhas, parágrafos e headings; também consulta `getOutline()`. Páginas com imagem incorporada e pouco texto recebem snapshot quando o canvas está disponível ou placeholder explícito.
+- Importação não corta mais o conteúdo em lotes fixos de 280 palavras. A paginação acontece no leitor, por blocos; somente blocos textuais longos são divididos.
+- Conteúdo legado em `string[]` continua legível por conversão compatível no `ImportedBookSource`.
+
+#### Experiência de leitura
+
+- Conteúdo contínuo é repaginado conforme viewport, fonte, margens e espaçamento, preservando capítulos e âncora global.
+- Capa entra como folha rígida inicial do page flip; `showCover` é ativado quando a janela inclui a capa.
+- Heading de capítulo aparece apenas na primeira página correspondente; parágrafos, versos, citações, listas, divisores e imagens têm renderização semântica própria.
+- `ResizeObserver` único é agrupado com `requestAnimationFrame`; não existe mais o teto de 580px.
+- Páginas memoizadas e janela de oito páginas no `react-pageflip`; rolagem usa nove páginas com espaçadores.
+- Chrome inicia visível, se oculta após 3 segundos, reabre por toque central e libera `100dvh` para o stage.
+- Papel claro usa `#faf7f0`, textura mínima, show-through de 2–4% apenas em claro/sépia e sombras rasas; o tema escuro troca isso por glow sutil.
+- Sete fontes reais são fornecidas por `next/font`, com preview e migração de preferências legadas.
+- Seleção oferece copiar, quatro cores de destaque, nota, dicionário e compartilhamento. Destaques usam âncoras globais.
+- Capítulos, miniaturas, busca e bookmarks continuam navegando pela mesma âncora após repaginação.
+
+As colunas `reading_progress.anchor_offset` e `bookmarks.anchor_offset`, além da nova tabela privada `highlights` com RLS, índices e grants, estão no SQL local. O schema precisa ser aplicado remotamente antes de testar persistência ponta a ponta.
 
 ### Interface e configurações
 
@@ -93,8 +108,8 @@ As colunas `reading_progress.anchor_offset` e `bookmarks.anchor_offset` estão n
 ## Dados e segurança
 
 - **Auth:** Supabase Auth.
-- **Postgres:** `profiles`, `account_aliases`, `books`, `created_books`, `chapters`, `reading_progress`, `book_reads`, `shelf_items`, `book_reactions`, `reviews`, `follows`, `activities`, `bookmarks`, `customization_settings`.
-- **RLS:** leitura pública apenas onde prevista; escrita do proprietário; progresso e marcadores privados.
+- **Postgres:** `profiles`, `account_aliases`, `books`, `created_books`, `chapters`, `reading_progress`, `book_reads`, `shelf_items`, `book_reactions`, `reviews`, `follows`, `activities`, `bookmarks`, `highlights`, `customization_settings`.
+- **RLS:** leitura pública apenas onde prevista; escrita do proprietário; progresso, marcadores e destaques privados.
 - **Grants:** visitantes não recebem `books.content`.
 - **Storage:** `covers`/`avatars` públicos e `uploads` privado por usuário.
 - **Segredos:** `.env.local`, `.vercel`, archives, caches, `.next` e `node_modules` são ignorados.
@@ -114,15 +129,18 @@ SUPABASE_SERVICE_ROLE_KEY=
 
 ## Testes de aceite ainda obrigatórios
 
+Os testes estruturais locais de EPUB/PDF/DOCX foram aprovados. Screenshots do leitor autenticado nos breakpoints 375/820/1194/1440, chrome visível/oculto, três temas, seletor de fontes, popup de seleção, page curl e persistência ponta a ponta **não são declarados aprovados**, pois o login está bloqueado sem `SUPABASE_SERVICE_ROLE_KEY` e o schema remoto ainda não contém `highlights`/âncoras.
+
 Depois de configurar a service role e aplicar o schema:
 
 1. cadastrar uma conta, confirmar login automático, logout e logins por e-mail/apelido;
 2. validar duplicidade case-insensitive de e-mail/apelido;
 3. criar A e B; A importa/publica, B lê;
 4. confirmar leitura única, proprietário sem incremento, progresso/Continue Reading e bloqueios de UI/RLS;
-5. testar mudanças de tipografia sem perder a âncora, capítulos, busca, miniaturas e bookmarks no banco;
-6. testar os fluxos `Início → Continue → leitor → X → Início` e `Biblioteca → detalhes → leitor → X → detalhes → X → Biblioteca`;
-7. remover o registro remoto demonstrativo identificado e repetir a busca final.
+5. testar mudanças de tipografia e margem sem perder a âncora, capítulos, busca, miniaturas e bookmarks no banco;
+6. produzir screenshots do leitor real em 375, 820, 1194 e 1440px, incluindo chrome visível/oculto, três temas, fontes, seleção, destaque/nota e page curl;
+7. testar os fluxos `Início → Continue → leitor → X → Início` e `Biblioteca → detalhes → leitor → X → detalhes → X → Biblioteca`;
+8. remover o registro remoto demonstrativo identificado e repetir a busca final.
 
 ## Desenvolvimento e preview
 
@@ -150,7 +168,7 @@ Este repositório Next.js não usa o deploy Cloudflare/Hono de um clique. Builds
 
 ## Limitações
 
-- PDF composto apenas por imagens requer OCR.
+- PDF composto apenas por imagens requer OCR; imagens detectadas sem extração viável recebem placeholder explícito.
 - EPUB com DRM não é suportado.
 - Conteúdo dos livros nunca é traduzido pela interface.
 - Não considerar autenticação, RLS multiusuário, exclusão ou deploy Vercel aprovados até a remoção dos bloqueios documentados.

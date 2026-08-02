@@ -1,6 +1,7 @@
 export type BookSource = 'imported' | 'created'
 export type BookFormat = 'epub' | 'pdf' | 'docx' | 'readr'
 export type ReaderTheme = 'light' | 'sepia' | 'dark'
+export type ReaderFontId = 'source-serif' | 'lora' | 'bitter' | 'merriweather' | 'atkinson' | 'inter' | 'public-sans' | 'serif' | 'sans'
 export type ShelfStatus = 'saved' | 'wishlist' | 'reading' | 'completed'
 
 export interface Book {
@@ -25,7 +26,7 @@ export interface Book {
   dislikes_count?: number
   shelf_status?: ShelfStatus
   file_url?: string | null
-  content?: string[]
+  content?: Array<string | ReaderChapter>
   created_at?: string
 }
 
@@ -100,12 +101,29 @@ export interface CreateBookPayload {
   chapters: Omit<Chapter, 'id' | 'created_book_id'>[]
 }
 
+export type ReaderBlock =
+  | { type: 'heading'; level: number; text: string }
+  | { type: 'paragraph'; text: string; dropCap?: boolean; preserveBreaks?: boolean }
+  | { type: 'blockquote'; text: string; preserveBreaks?: boolean }
+  | { type: 'list-item'; text: string; ordered?: boolean }
+  | { type: 'divider' }
+  | { type: 'image'; src: string; alt?: string }
+
+export interface ReaderChapter {
+  id: string
+  title: string
+  href?: string
+  blocks: ReaderBlock[]
+}
+
 export interface ReaderPage {
   chapterTitle: string
   pageNumber: number
-  html: string
-  text?: string
-  anchor?: number
+  anchor: number
+  blocks: ReaderBlock[]
+  isFirstPageOfChapter?: boolean
+  isCover?: boolean
+  coverUrl?: string
 }
 
 export interface ReaderBookmark {
@@ -117,4 +135,20 @@ export interface ReaderBookmark {
   anchor_offset?: number
   note?: string
   created_at: string
+}
+
+export type HighlightColor = 'yellow' | 'green' | 'blue' | 'pink'
+
+export interface ReaderHighlight {
+  id: string
+  user_id: string
+  book_id: string
+  book_source: BookSource
+  anchor_start: number
+  anchor_end: number
+  selected_text: string
+  color: HighlightColor
+  note?: string | null
+  created_at: string
+  updated_at?: string
 }

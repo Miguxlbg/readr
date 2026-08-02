@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import type { ReaderTheme } from '@/lib/types'
+import type { ReaderFontId, ReaderTheme } from '@/lib/types'
 
 export type ReaderAnimation = 'real-page' | 'slide' | 'fade'
 export type ReaderViewMode = 'pages' | 'scroll'
@@ -9,7 +9,7 @@ interface ReaderState {
   currentPage: number
   theme: ReaderTheme
   fontSize: number
-  fontFamily: 'serif' | 'sans'
+  fontFamily: ReaderFontId
   margin: number
   lineSpacing: number
   brightness: number
@@ -24,7 +24,7 @@ interface ReaderState {
   setPage: (page: number) => void
   setTheme: (theme: ReaderTheme) => void
   setFontSize: (size: number) => void
-  setFontFamily: (font: 'serif' | 'sans') => void
+  setFontFamily: (font: ReaderFontId) => void
   setMargin: (margin: number) => void
   setLineSpacing: (spacing: number) => void
   setBrightness: (brightness: number) => void
@@ -42,7 +42,7 @@ export const useReaderStore = create<ReaderState>()(persist((set) => ({
   currentPage: 0,
   theme: 'light',
   fontSize: 18,
-  fontFamily: 'serif',
+  fontFamily: 'source-serif',
   margin: 38,
   lineSpacing: 1.68,
   brightness: 100,
@@ -71,6 +71,11 @@ export const useReaderStore = create<ReaderState>()(persist((set) => ({
   setSearchQuery: (searchQuery) => set({ searchQuery }),
 }), {
   name: 'readr-reader-preferences',
+  version: 2,
+  migrate: (persisted: any) => ({
+    ...persisted,
+    fontFamily: persisted?.fontFamily === 'sans' ? 'inter' : persisted?.fontFamily === 'serif' ? 'source-serif' : persisted?.fontFamily || 'source-serif',
+  }),
   partialize: (state) => ({
     theme: state.theme,
     fontSize: state.fontSize,

@@ -176,6 +176,22 @@ create table if not exists public.bookmarks (
 
 alter table public.bookmarks add column if not exists anchor_offset bigint not null default 0;
 
+create table if not exists public.highlights (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references public.profiles(id) on delete cascade,
+  book_id uuid not null,
+  book_source text not null check (book_source in ('imported','created')),
+  anchor_start bigint not null,
+  anchor_end bigint not null,
+  selected_text text not null,
+  color text not null default 'yellow' check (color in ('yellow','green','blue','pink')),
+  note text,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now(),
+  check (anchor_end >= anchor_start)
+);
+create index if not exists highlights_reader_lookup on public.highlights (user_id, book_id, book_source, anchor_start, anchor_end);
+
 create or replace function public.generate_reader_id()
 returns char(8) language plpgsql as $$
 declare candidate char(8);
@@ -260,6 +276,7 @@ alter table public.reviews enable row level security;
 alter table public.follows enable row level security;
 alter table public.activities enable row level security;
 alter table public.bookmarks enable row level security;
+alter table public.highlights enable row level security;
 
 do $$ declare p record; begin
   for p in select schemaname, tablename, policyname from pg_policies where schemaname='public' loop
@@ -298,6 +315,7 @@ create policy "follows_manage_own" on public.follows for all to authenticated us
 create policy "activities_public_read" on public.activities for select using (true);
 create policy "activities_insert_own" on public.activities for insert to authenticated with check (auth.uid() = user_id);
 create policy "bookmarks_manage_own" on public.bookmarks for all to authenticated using (auth.uid() = user_id) with check (auth.uid() = user_id);
+create policy "highlights_manage_own" on public.highlights for all to authenticated using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
 revoke all on public.account_aliases from anon, authenticated;
 revoke all on public.books from anon;
@@ -305,7 +323,7 @@ grant select (id, user_id, title, author, description, cover_url, format, total_
 grant select, insert, update, delete on public.books to authenticated;
 grant select on public.profiles, public.created_books, public.reviews, public.book_reactions, public.follows, public.activities to anon, authenticated;
 grant insert, update, delete on public.created_books, public.reviews, public.book_reactions, public.follows, public.activities to authenticated;
-grant select, insert, update, delete on public.chapters, public.reading_progress, public.customization_settings, public.book_reads, public.shelf_items, public.bookmarks to authenticated;
+grant select, insert, update, delete on public.chapters, public.reading_progress, public.customization_settings, public.book_reads, public.shelf_items, public.bookmarks, public.highlights to authenticated;
 
 insert into storage.buckets (id, name, public) values ('covers', 'covers', true), ('avatars', 'avatars', true), ('uploads', 'uploads', false) on conflict (id) do nothing;
 drop policy if exists "cover_public_read" on storage.objects;

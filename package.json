@@ -6,7 +6,8 @@
     "dev": "next dev -H 0.0.0.0 -p 3000",
     "build": "next build",
     "start": "next start -H 0.0.0.0 -p 3000",
-    "lint": "next lint"
+    "lint": "next lint",
+    "check:reader-translations": "node scripts/check-reader-translations.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.5.2",

@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/client'
 import { parseBookFile } from '@/lib/reader/parseBook'
-import { CreatedBookSource, ImportedBookSource, repaginateReaderContent } from '@/lib/reader/ReaderSource'
-import type { Book, BookReview, BookSource, CreateBookPayload, CreatedBook, ReadingProgress, ShelfStatus, UserProfile } from '@/lib/types'
+import { CreatedBookSource, ImportedBookSource, readerPageText, repaginateReaderContent } from '@/lib/reader/ReaderSource'
+import type { Book, BookReview, BookSource, CreateBookPayload, CreatedBook, HighlightColor, ReaderHighlight, ReadingProgress, ShelfStatus, UserProfile } from '@/lib/types'
 
 export interface ImportOptions {
   title?: string
@@ -214,7 +214,7 @@ export async function getContinueReading(userId: string): Promise<ContinueReadin
     ? Math.max(0, pages.findLastIndex((page) => Number(page.anchor || 0) <= anchor))
     : Math.min(progress.current_page, Math.max(0, pages.length - 1))
   const page = pages[index]
-  return { book: { ...book, total_pages: pages.length }, progress: { ...progress, current_page: index }, pageHtml: page?.text || '', chapterTitle: page?.chapterTitle || '' }
+  return { book: { ...book, total_pages: pages.length }, progress: { ...progress, current_page: index }, pageHtml: page ? readerPageText(page) : '', chapterTitle: page?.chapterTitle || '' }
 }
 export async function registerBookRead(bookId: string, source: BookSource) {
   const { error } = await createClient().rpc('register_book_read', { target_book_id: bookId, target_source: source })
@@ -337,6 +337,46 @@ export async function toggleBookmark(userId: string, bookId: string, source: Boo
   const { error: insertError } = await supabase.from('bookmarks').insert({ user_id: userId, book_id: bookId, book_source: source, page_number: pageNumber, anchor_offset: anchorOffset, note })
   if (insertError) throw insertError
   return true
+}
+
+export async function getHighlights(userId: string, bookId: string, source: BookSource): Promise<ReaderHighlight[]> {
+  const { data, error } = await createClient().from('highlights').select('*').eq('user_id', userId).eq('book_id', bookId).eq('book_source', source).order('anchor_start')
+  if (error) throw error
+  return (data || []) as ReaderHighlight[]
+}
+
+export async function createHighlight(input: {
+  userId: string
+  bookId: string
+  source: BookSource
+  anchorStart: number
+  anchorEnd: number
+  selectedText: string
+  color: HighlightColor
+  note?: string
+}) {
+  const { data, error } = await createClient().from('highlights').insert({
+    user_id: input.userId,
+    book_id: input.bookId,
+    book_source: input.source,
+    anchor_start: input.anchorStart,
+    anchor_end: input.anchorEnd,
+    selected_text: input.selectedText,
+    color: input.color,
+    note: input.note || null,
+  }).select('*').single()
+  if (error) throw error
+  return data as ReaderHighlight
+}
+
+export async function updateHighlightNote(id: string, userId: string, note: string) {
+  const { error } = await createClient().from('highlights').update({ note, updated_at: new Date().toISOString() }).eq('id', id).eq('user_id', userId)
+  if (error) throw error
+}
+
+export async function deleteHighlight(id: string, userId: string) {
+  const { error } = await createClient().from('highlights').delete().eq('id', id).eq('user_id', userId)
+  if (error) throw error
 }
 
 export async function uploadCover(file: File, userId: string) {

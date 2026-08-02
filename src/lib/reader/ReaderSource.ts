@@ -1,73 +1,121 @@
-import type { Book, Chapter, ReaderPage } from '@/lib/types'
+import type { Book, Chapter, ReaderBlock, ReaderChapter, ReaderPage } from '@/lib/types'
+import { countReaderWords, legacyHtmlToChapter, readerBlocksText } from './blocks'
 
 export interface ReaderSource {
   book: Book
-  load(): Promise<ReaderPage[]>
+  load(): Promise<ReaderChapter[]>
 }
 
-function decodeEntities(value: string) {
-  if (typeof document === 'undefined') return value
-  const node = document.createElement('textarea')
-  node.innerHTML = value
-  return node.value
+export function readerPageText(page: Pick<ReaderPage, 'blocks'>) {
+  return readerBlocksText(page.blocks)
 }
 
-export function plainText(html: string) {
-  return decodeEntities(html.replace(/<[^>]*>/g, ' ')).replace(/\s+/g, ' ').trim()
+function splitTextBlock(block: Extract<ReaderBlock, { text: string }>, maximum: number) {
+  const words = block.text.split(/\s+/).filter(Boolean)
+  if (words.length <= maximum) return [block]
+  const fragments: typeof block[] = []
+  for (let index = 0; index < words.length; index += maximum) {
+    fragments.push({
+      ...block,
+      text: words.slice(index, index + maximum).join(' '),
+      ...('dropCap' in block ? { dropCap: Boolean(block.dropCap && index === 0) } : {}),
+    })
+  }
+  return fragments
 }
 
-function sourcePage(text: string, chapterTitle: string, pageNumber: number, anchor = 0): ReaderPage {
-  return { chapterTitle, pageNumber, html: '', text: plainText(text), anchor }
-}
-
-export function repaginateReaderContent(source: ReaderPage[], wordsPerPage: number): ReaderPage[] {
-  const safeSize = Math.max(55, Math.round(wordsPerPage))
+export function repaginateReaderContent(source: ReaderChapter[], wordsPerPage: number): ReaderPage[] {
+  const capacity = Math.max(55, Math.round(wordsPerPage))
   const result: ReaderPage[] = []
   let globalAnchor = 0
 
-  source.forEach((section) => {
-    const words = (section.text || plainText(section.html)).split(/\s+/).filter(Boolean)
-    if (!words.length) return
-    for (let index = 0; index < words.length; index += safeSize) {
-      const text = words.slice(index, index + safeSize).join(' ')
+  source.forEach((chapter) => {
+    let pageBlocks: ReaderBlock[] = []
+    let pageWords = 0
+    let pageAnchor = globalAnchor
+    let firstPage = true
+    const flush = () => {
+      if (!pageBlocks.length) return
       result.push({
-        chapterTitle: section.chapterTitle,
+        chapterTitle: chapter.title,
         pageNumber: result.length + 1,
-        html: '',
-        text,
-        anchor: globalAnchor + index,
+        anchor: pageAnchor,
+        blocks: pageBlocks,
+        isFirstPageOfChapter: firstPage,
       })
+      firstPage = false
+      pageBlocks = []
+      pageWords = 0
+      pageAnchor = globalAnchor
     }
-    globalAnchor += words.length
+
+    chapter.blocks.forEach((originalBlock, blockIndex) => {
+      const block: ReaderBlock = originalBlock.type === 'paragraph'
+        ? { ...originalBlock, dropCap: originalBlock.dropCap ?? blockIndex === chapter.blocks.findIndex((item) => item.type === 'paragraph') }
+        : originalBlock
+      const wordCount = countReaderWords([block])
+      if (block.type === 'image') {
+        if (pageBlocks.length) flush()
+        pageBlocks.push(block)
+        flush()
+        return
+      }
+      if (block.type === 'divider') {
+        if (pageWords > capacity * 0.82) flush()
+        pageBlocks.push(block)
+        return
+      }
+      if (block.type === 'heading' && pageBlocks.length && pageWords > capacity * 0.3) flush()
+      const available = Math.max(28, capacity - pageWords)
+      const fragments = 'text' in block ? splitTextBlock(block, Math.max(55, available)) : [block]
+      fragments.forEach((fragment, fragmentIndex) => {
+        const fragmentWords = countReaderWords([fragment])
+        if (pageBlocks.length && pageWords + fragmentWords > capacity) flush()
+        if (!pageBlocks.length) pageAnchor = globalAnchor
+        pageBlocks.push(fragment)
+        pageWords += fragmentWords
+        globalAnchor += fragmentWords
+        if (fragmentIndex < fragments.length - 1) flush()
+      })
+    })
+    flush()
   })
 
-  return result.length ? result : [{ chapterTitle: '', pageNumber: 1, html: '', text: 'Este livro ainda está em branco.', anchor: 0 }]
+  return result.length ? result : [{
+    chapterTitle: '',
+    pageNumber: 1,
+    anchor: 0,
+    blocks: [{ type: 'paragraph', text: 'Este livro ainda está em branco.' }],
+    isFirstPageOfChapter: true,
+  }]
 }
 
 export class CreatedBookSource implements ReaderSource {
   constructor(public book: Book, private chapters: Chapter[]) {}
 
   async load() {
-    let anchor = 0
     return [...this.chapters]
       .sort((a, b) => a.order_index - b.order_index)
-      .map((chapter, index) => {
-        const page = sourcePage(chapter.content, chapter.title || `Capítulo ${index + 1}`, index + 1, anchor)
-        anchor += page.text?.split(/\s+/).filter(Boolean).length || 0
-        return page
-      })
+      .map((chapter, index) => legacyHtmlToChapter(chapter.content, index, chapter.title || `Capítulo ${index + 1}`))
   }
+}
+
+function isReaderChapter(value: string | ReaderChapter): value is ReaderChapter {
+  return typeof value === 'object' && value !== null && Array.isArray(value.blocks)
 }
 
 export class ImportedBookSource implements ReaderSource {
   constructor(public book: Book) {}
 
   async load() {
-    let anchor = 0
-    return (this.book.content || []).map((html, index) => {
-      const page = sourcePage(html, `Página ${index + 1}`, index + 1, anchor)
-      anchor += page.text?.split(/\s+/).filter(Boolean).length || 0
-      return page
-    })
+    return (this.book.content || []).map((content, index) => isReaderChapter(content)
+      ? {
+          ...content,
+          id: content.id || `imported-${index}`,
+          title: content.title || `Capítulo ${index + 1}`,
+          blocks: content.blocks || [],
+        }
+      : legacyHtmlToChapter(content, index),
+    )
   }
 }
