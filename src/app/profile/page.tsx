@@ -6,9 +6,8 @@ import { BookOpen, Camera, Languages, LogOut, Save, UserPlus, Users } from 'luci
 import { useTranslations } from 'next-intl'
 import { useRouter } from 'next/navigation'
 import { AppShell } from '@/components/layout/AppShell'
-import { getCurrentProfile, getFollowCounts, getRankings } from '@/lib/data'
-import { createClient } from '@/lib/supabase/client'
-import { signOut } from '@/lib/supabase/auth'
+import { getCurrentProfile, getFollowCounts, getRankings, updateProfile, uploadAvatar } from '@/lib/data'
+import { signOut } from '@/lib/auth-client'
 import type { UserProfile } from '@/lib/types'
 import { useLanguage, type AppLanguage } from '@/components/ui/LanguageProvider'
 
@@ -35,13 +34,21 @@ export default function ProfilePage() {
 
   async function upload(file?: File) {
     if (!file || !profile) return
-    const supabase = createClient(); const ext = file.name.split('.').pop() || 'jpg'; const path = `${profile.id}/avatar.${ext}`
-    const { error } = await supabase.storage.from('avatars').upload(path, file, { upsert: true }); if (error) { setMessage(error.message); return }
-    const url = supabase.storage.from('avatars').getPublicUrl(path).data.publicUrl
-    await supabase.from('profiles').update({ avatar_url: url }).eq('id', profile.id)
-    setProfile({ ...profile, avatar_url: url }); setMessage('Foto atualizada.')
+    try {
+      const url = await uploadAvatar(file, profile.id)
+      setProfile({ ...profile, avatar_url: url }); setMessage('Foto atualizada.')
+    } catch (cause) {
+      setMessage(cause instanceof Error ? cause.message : 'Não foi possível enviar a foto.')
+    }
   }
-  async function save() { if (!profile) return; const { error } = await createClient().from('profiles').update({ display_name: name, bio }).eq('id', profile.id); setMessage(error?.message || 'Perfil salvo.') }
+  async function save() {
+    if (!profile) return
+    try {
+      await updateProfile({ display_name: name, bio }); setMessage('Perfil salvo.')
+    } catch (cause) {
+      setMessage(cause instanceof Error ? cause.message : 'Não foi possível salvar o perfil.')
+    }
+  }
   async function logout() { await signOut(); router.push('/auth/login') }
 
   return (

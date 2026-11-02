@@ -1,36 +1,17 @@
 import { NextResponse } from 'next/server'
-import { createClient as createAdminClient, type SupabaseClient } from '@supabase/supabase-js'
-import { createClient as createServerClient } from '@/lib/supabase/server'
+import { dispatch } from '@/server/store'
+import { sessionCookie, getSessionUser } from '@/server/auth'
 
-export const runtime = 'nodejs'
-
-async function removeUserFolder(admin: SupabaseClient, bucket: string, userId: string) {
-  const { data, error } = await admin.storage.from(bucket).list(userId, { limit: 1000 })
-  if (error) throw error
-  const paths = (data || []).filter((item) => item.id).map((item) => `${userId}/${item.name}`)
-  if (!paths.length) return
-  const { error: removeError } = await admin.storage.from(bucket).remove(paths)
-  if (removeError) throw removeError
-}
-
-export async function DELETE() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-  if (!url || !serviceKey) {
-    return NextResponse.json({ error: 'Exclusão indisponível: configure SUPABASE_SERVICE_ROLE_KEY no servidor.' }, { status: 503 })
-  }
-
-  const server = createServerClient()
-  const { data: { user }, error: userError } = await server.auth.getUser()
-  if (userError || !user) return NextResponse.json({ error: 'Sessão inválida.' }, { status: 401 })
-
-  const admin = createAdminClient(url, serviceKey, { auth: { autoRefreshToken: false, persistSession: false } })
+export async function DELETE(request: Request) {
+  const user = await getSessionUser(request)
+  if (!user) return NextResponse.json({ ok: false, error: 'Sessão ausente ou inválida.' }, { status: 401 })
   try {
-    await Promise.all(['uploads', 'covers', 'avatars'].map((bucket) => removeUserFolder(admin, bucket, user.id)))
-    const { error } = await admin.auth.admin.deleteUser(user.id)
-    if (error) throw error
-    return NextResponse.json({ ok: true })
-  } catch (cause) {
-    return NextResponse.json({ error: cause instanceof Error ? cause.message : 'Não foi possível excluir a conta.' }, { status: 500 })
+    await dispatch('account_delete', {}, user)
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Não foi possível excluir sua conta.'
+    return NextResponse.json({ ok: false, error: message }, { status: 400 })
   }
+  const response = NextResponse.json({ ok: true })
+  response.cookies.set(sessionCookie('', 0))
+  return response
 }

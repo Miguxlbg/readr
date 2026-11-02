@@ -1,0 +1,37 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "readr",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2025-10-01",
+  "compatibility_flags": [
+    // APIs do Node no runtime do Workers (exigido pelo OpenNext)
+    "nodejs_compat",
+    // fetch só para URLs públicas (evitatentativas de loop interno do Workers)
+    "global_fetch_strictly_public"
+  ],
+  // Saída do build do OpenNext (não alterar)
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "services": [
+    {
+      // O Worker precisa referenciar a si mesmo (exigido pelo OpenNext)
+      "binding": "WORKER_SELF_REFERENCE",
+      "service": "readr"
+    }
+  ],
+  // Dados: D1 apenas. Sem R2, sem Supabase, sem KV.
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "readr",
+      "database_id": "947f167c-7e35-4dce-aac2-19c6da6c1eee"
+    }
+  ],
+  // JWT_SECRET é `wrangler secret put JWT_SECRET` (nunca declarar aqui)
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1
+  }
+}

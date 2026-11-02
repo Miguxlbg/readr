@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { ArrowRight, LoaderCircle } from 'lucide-react'
 import { useTranslations } from 'next-intl'
-import { signIn } from '@/lib/supabase/auth'
+import { signIn } from '@/lib/auth-client'
 
 export function LoginForm() {
   const router = useRouter()

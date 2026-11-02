@@ -1,4 +1,7 @@
 import type { Metadata } from 'next'
 import { BookEditor } from '@/components/editor/BookEditor'
 export const metadata: Metadata = { title: 'Editar livro' }
-export default function EditBookPage({ params }: { params: { id: string } }) { return <BookEditor bookId={params.id} /> }
+export default async function EditBookPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+  return <BookEditor bookId={id} />
+}

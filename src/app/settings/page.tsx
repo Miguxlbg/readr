@@ -8,7 +8,7 @@ import { AppShell } from '@/components/layout/AppShell'
 import { ThemeSwitcher } from '@/components/reader/ThemeSwitcher'
 import { useAppTheme } from '@/components/ui/AppThemeProvider'
 import { useLanguage, type AppLanguage } from '@/components/ui/LanguageProvider'
-import { signOut } from '@/lib/supabase/auth'
+import { signOut } from '@/lib/auth-client'
 import { useReaderStore } from '@/store/readerStore'
 
 export default function SettingsPage() {

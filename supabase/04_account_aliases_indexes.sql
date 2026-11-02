@@ -1,0 +1,2 @@
+CREATE UNIQUE INDEX IF NOT EXISTS account_aliases_nickname_unique ON account_aliases (lower(nickname));
+CREATE UNIQUE INDEX IF NOT EXISTS account_aliases_email_unique ON account_aliases (lower(email));

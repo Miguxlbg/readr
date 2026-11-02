@@ -1,0 +1,2 @@
+CREATE UNIQUE INDEX IF NOT EXISTS profiles_nickname_unique ON profiles (lower(nickname)) WHERE nickname IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS profiles_public_id_unique ON profiles (public_id) WHERE public_id IS NOT NULL;

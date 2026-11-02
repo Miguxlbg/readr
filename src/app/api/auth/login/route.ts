@@ -1,36 +1,25 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-
-export const runtime = 'nodejs'
+import { db, profileOut } from '@/server/store'
+import { constantTimeEquals, hashClientKey, signSessionToken, respondWithSession } from '@/server/auth'
 
 export async function POST(request: Request) {
-  try {
-    const { identifier, password } = await request.json() as { identifier?: string; password?: string }
-    const login = identifier?.trim().toLocaleLowerCase('pt-BR').replace(/^@/, '')
-    if (!login || !password) return NextResponse.json({ error: 'Informe seu e-mail ou apelido e sua senha.' }, { status: 400 })
+  const body = await request.json().catch(() => ({}) as Record<string, unknown>)
+  const identifier = String(body.identifier ?? '').trim().toLowerCase().replace(/^@/, '')
+  const k = String(body.k ?? '')
 
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-    if (!url || !anonKey || !serviceKey) return NextResponse.json({ error: 'Login indisponível: configuração do servidor incompleta.' }, { status: 503 })
+  if (!identifier) return NextResponse.json({ ok: false, error: 'Informe seu e-mail ou apelido.' }, { status: 400 })
+  if (!/^[a-f0-9]{64}$/.test(k)) return NextResponse.json({ ok: false, error: 'Não foi possível entrar. Recarregue a página.' }, { status: 400 })
 
-    let email = login
-    if (!login.includes('@')) {
-      const admin = createClient(url, serviceKey, { auth: { autoRefreshToken: false, persistSession: false } })
-      const { data } = await admin.from('account_aliases').select('email').ilike('nickname', login).maybeSingle()
-      if (!data?.email) return NextResponse.json({ error: 'Apelido ou senha inválidos.' }, { status: 401 })
-      email = data.email
-    }
+  const row = await db().prepare('select * from profiles where lower(email) = ? or lower(nickname) = ?')
+    .bind(identifier, identifier).first<Record<string, any>>()
+  if (!row) return NextResponse.json({ ok: false, error: 'E-mail ou senha incorretos.' }, { status: 401 })
 
-    const auth = createClient(url, anonKey, { auth: { autoRefreshToken: false, persistSession: false } })
-    const { data, error } = await auth.auth.signInWithPassword({ email, password })
-    if (error || !data.session) return NextResponse.json({ error: 'E-mail, apelido ou senha inválidos.' }, { status: 401 })
-
-    return NextResponse.json({
-      access_token: data.session.access_token,
-      refresh_token: data.session.refresh_token,
-    })
-  } catch {
-    return NextResponse.json({ error: 'Dados de login inválidos.' }, { status: 400 })
+  const hash = await hashClientKey(k, row.kdf_salt)
+  if (!constantTimeEquals(hash, String(row.password_hash))) {
+    return NextResponse.json({ ok: false, error: 'E-mail ou senha incorretos.' }, { status: 401 })
   }
+
+  const token = await signSessionToken(String(row.id))
+  const response = NextResponse.json({ ok: true, profile: profileOut(row) })
+  return respondWithSession(response, token)
 }
