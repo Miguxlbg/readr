@@ -1,0 +1,65 @@
+- generic [active] [ref=f1e1]:
+  - generic [ref=f1e2]:
+    - complementary [ref=f1e3]:
+      - link "Readr" [ref=f1e4] [cursor=pointer]:
+        - /url: /
+      - navigation "Navegação principal" [ref=f1e5]:
+        - link "Início" [ref=f1e6] [cursor=pointer]:
+          - /url: /
+        - link "Minha Estante" [ref=f1e10] [cursor=pointer]:
+          - /url: /library
+        - link "Criados" [ref=f1e13] [cursor=pointer]:
+          - /url: /library/created
+        - link "Biblioteca" [ref=f1e16] [cursor=pointer]:
+          - /url: /library/community
+        - link "Comunidade" [ref=f1e20] [cursor=pointer]:
+          - /url: /community
+        - link "Configurações" [ref=f1e26] [cursor=pointer]:
+          - /url: /settings
+      - button "Abrir menu" [ref=f1e30] [cursor=pointer]
+    - generic [ref=f1e32]:
+      - generic [ref=f1e33]:
+        - search [ref=f1e34]:
+          - textbox "Buscar livros" [ref=f1e38]:
+            - /placeholder: Buscar por livro ou autor...
+        - generic [ref=f1e39]:
+          - button "Ativar tema escuro" [ref=f1e40] [cursor=pointer]
+          - link "R Reteste Cloudflare" [ref=f1e76] [cursor=pointer]:
+            - /url: /profile
+            - generic [ref=f1e44]: R
+            - generic [ref=f1e48]: Reteste Cloudflare
+      - main [ref=f1e49]:
+        - generic [ref=f1e50]:
+          - generic [ref=f1e51]:
+            - link "Voltar" [ref=f1e52] [cursor=pointer]:
+              - /url: /library
+            - generic [ref=f1e55]:
+              - paragraph [ref=f1e56]: Adicionar à biblioteca
+              - heading "Importar livro" [level=1] [ref=f1e57]
+          - generic [ref=f1e58]:
+            - generic [ref=f1e59]:
+              - generic [ref=f1e61] [cursor=pointer]:
+                - heading "readr-teste.epub" [level=2] [ref=f1e80]
+                - paragraph [ref=f1e67]: Clique ou arraste um arquivo EPUB, PDF ou DOCX
+              - generic [ref=f1e81]:
+                - generic [ref=f1e82]:
+                  - generic [ref=f1e83]: Título
+                  - textbox "Título" [ref=f1e84]: readr-teste
+                - generic [ref=f1e85]:
+                  - generic [ref=f1e86]: Autor
+                  - textbox "Autor" [ref=f1e87]:
+                    - /placeholder: Opcional
+                - button "Adicionar capa" [ref=f1e89] [cursor=pointer]
+            - complementary [ref=f1e68]:
+              - heading "Importação persistente" [level=2] [ref=f1e72]
+              - generic [ref=f1e95]:
+                - generic "Capa de readr-teste" [ref=f1e96]:
+                  - generic [ref=f1e97]:
+                    - generic [ref=f1e98]: epub
+                    - strong [ref=f1e99]: readr-teste
+                - generic [ref=f1e100]:
+                  - paragraph [ref=f1e101]: readr-teste
+                  - paragraph [ref=f1e102]: Autor não informado
+                  - paragraph [ref=f1e103]: epub
+              - button "Processando arquivo" [disabled] [ref=f1e104]
+  - alert [ref=f1e75]

@@ -18,17 +18,17 @@ export async function GET(request: Request, next: { params: Promise<{ id: string
   const { results } = await db().prepare('select data from file_chunks where file_id = ? order by chunk_index').bind(id).all<{ data: ArrayBuffer }>()
   if (!(results || []).length) return new NextResponse(null, { status: 404 })
 
-  const size = Number(row.size || 0)
-  const buffer = new Uint8Array(Math.max(size, results.length * 512 * 1024))
+  const buffer = new Uint8Array(Math.ceil(Number(row.size || 0)))
   let offset = 0
   for (const chunk of results) {
     const part = new Uint8Array(chunk.data)
     buffer.set(part, offset)
     offset += part.length
   }
+  const body = buffer.subarray(0, offset)
   const headers = new Headers()
   headers.set('Content-Type', String(row.mime || 'application/octet-stream'))
-  headers.set('Content-Length', String(buffer.length))
+  headers.set('Content-Length', String(offset))
   headers.set('Cache-Control', Number(row.is_public) ? 'public, max-age=31536000, immutable' : 'private, no-store')
-  return new Response(buffer.subarray(0, buffer.length), { headers })
+  return new Response(body, { headers })
 }

@@ -1,0 +1,41 @@
+- generic [ref=e1]:
+  - main [ref=e2]:
+    - generic [ref=e3]:
+      - complementary [ref=e4]:
+        - link "Readr" [ref=e5] [cursor=pointer]:
+          - /url: /
+        - article [ref=e6]:
+          - heading "Histórias ganham vida quando encontram um leitor." [level=2] [ref=e10]
+          - paragraph [ref=e11]: Sua biblioteca, seus livros e seu progresso em um espaço feito para ler sem distrações.
+      - generic [ref=e13]:
+        - paragraph [ref=e17]: Comece sua biblioteca
+        - heading "Crie sua conta no Readr" [level=1] [ref=e18]
+        - paragraph [ref=e19]: Cadastre nome, apelido único, e-mail e senha. Sua conta entra automaticamente, sem confirmação por e-mail.
+        - generic [ref=e21]:
+          - generic [ref=e22]:
+            - generic [ref=e23]: Nome
+            - textbox "Nome" [ref=e24]:
+              - /placeholder: Seu nome
+              - text: Reteste Cloudflare
+          - generic [ref=e25]:
+            - generic [ref=e26]: Apelido
+            - textbox "Apelido Será sua identidade pública e também poderá ser usado para entrar." [ref=e27]:
+              - /placeholder: seuapelido
+              - text: retest7331
+            - generic [ref=e28]: Será sua identidade pública e também poderá ser usado para entrar.
+          - generic [ref=e29]:
+            - generic [ref=e30]: E-mail
+            - textbox "E-mail" [ref=e31]:
+              - /placeholder: seu@email.com
+              - text: retest7331@readr.test
+          - generic [ref=e32]:
+            - generic [ref=e33]: Senha
+            - textbox "Senha" [active] [ref=e34]:
+              - /placeholder: Escolha uma senha
+              - text: SenhaForte123!
+          - button "Criar conta e entrar" [ref=e35] [cursor=pointer]
+          - paragraph [ref=e38]:
+            - text: Já tem conta?
+            - link "Entrar" [ref=e39] [cursor=pointer]:
+              - /url: /auth/login
+  - alert [ref=e40]

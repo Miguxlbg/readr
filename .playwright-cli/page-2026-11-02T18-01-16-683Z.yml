@@ -1,0 +1,30 @@
+- generic [ref=f3e1]:
+  - main [ref=f3e2]:
+    - generic [ref=f3e3]:
+      - complementary [ref=f3e4]:
+        - link "Readr" [ref=f3e5] [cursor=pointer]:
+          - /url: /
+        - article [ref=f3e6]:
+          - heading "Histórias ganham vida quando encontram um leitor." [level=2] [ref=f3e10]
+          - paragraph [ref=f3e11]: Sua biblioteca, seus livros e seu progresso em um espaço feito para ler sem distrações.
+      - generic [ref=f3e13]:
+        - paragraph [ref=f3e17]: Que bom ter você de volta
+        - heading "Bem-vindo ao Readr" [level=1] [ref=f3e18]
+        - paragraph [ref=f3e19]: Entre com seu e-mail ou apelido e sua senha para continuar sua leitura.
+        - generic [ref=f3e21]:
+          - generic [ref=f3e22]:
+            - generic [ref=f3e23]: E-mail ou apelido
+            - textbox "E-mail ou apelido" [ref=f3e24]:
+              - /placeholder: seu@email.com ou @apelido
+              - text: browsertest17066
+          - generic [ref=f3e25]:
+            - generic [ref=f3e26]: Senha
+            - textbox "Senha" [active] [ref=f3e27]:
+              - /placeholder: Sua senha
+              - text: SenhaForte123!
+          - button "Entrar" [ref=f3e28] [cursor=pointer]
+          - paragraph [ref=f3e31]:
+            - text: Ainda não tem conta?
+            - link "Criar conta" [ref=f3e32] [cursor=pointer]:
+              - /url: /auth/signup
+  - alert [ref=f3e33]
