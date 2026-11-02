@@ -42,3 +42,6 @@ pnpm-debug.log*
 scripts/.env.cloudflare
 *.tmp
 
+# testes de navegador (artefatos do playwright-cli)
+/.playwright-cli
+
